@@ -494,10 +494,35 @@ function SkyeUI:CreateWindow(title)
         AddThemeConnection(titleLabel, {TextColor3 = "Text"})
         AddThemeConnection(contentLabel, {TextColor3 = "SubText"})
 
-        -- Wait a heartbeat for layout to settle to get size
-        RunService.Heartbeat:Wait()
-        local targetSize = UDim2.new(1, 0, 0, notification.AbsoluteContentSize.Y)
-        Tween(notification, {Size = targetSize}, 0.28)
+        -- Wait for layout to settle, then measure content height safely
+RunService.Heartbeat:Wait()
+
+local contentHeight = 0
+local listLayout = notification:FindFirstChildOfClass("UIListLayout") or notification:FindFirstChildOfClass("UIGridLayout")
+
+if listLayout and listLayout.AbsoluteContentSize then
+    -- Preferred: read size from layout
+    contentHeight = listLayout.AbsoluteContentSize.Y
+else
+    -- Fallback: give a few frames for Roblox to compute sizes, then sum children heights
+    for i = 1, 3 do RunService.Heartbeat:Wait() end
+    for _, child in ipairs(notification:GetChildren()) do
+        if child:IsA("GuiObject") and child.Visible then
+            contentHeight = contentHeight + (child.AbsoluteSize.Y or 0)
+        end
+    end
+    -- If UIPadding exists, include its offsets (works if padding uses Offset values)
+    local pad = notification:FindFirstChildOfClass("UIPadding")
+    if pad then
+        local top = (pad.PaddingTop and pad.PaddingTop.Offset) or 0
+        local bottom = (pad.PaddingBottom and pad.PaddingBottom.Offset) or 0
+        contentHeight = contentHeight + top + bottom
+    end
+end
+
+-- Ensure at least 1px so tween target is valid
+local targetSize = UDim2.new(1, 0, 0, math.max(1, math.ceil(contentHeight)))
+Tween(notification, {Size = targetSize}, 0.28)
         task.delay(duration, function()
             Tween(notification, {Size = UDim2.new(0, 0, 0, 0)}, 0.28)
             task.wait(0.28)
