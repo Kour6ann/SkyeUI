@@ -772,30 +772,46 @@ function SkyeUI:CreateDropdown(parent, text, options, default, callback)
         end
     end
 
-    dropdownButton.MouseButton1Click:Connect(function()
-        optionsFrame.Visible = not optionsFrame.Visible
-        Tween(dropdownIcon, {Rotation = optionsFrame.Visible and 180 or 0}, 0.16)
-        if optionsFrame.Visible then createOptions() end
-    end)
+    -- Replace existing dropdownButton.MouseButton1Click handler with this block
+dropdownButton.MouseButton1Click:Connect(function()
+    if optionsFrame.Visible then
+        -- close
+        optionsFrame.Visible = false
+        Tween(dropdownIcon, {Rotation = 0}, 0.16)
+        return
+    end
 
-    -- close if clicking outside
-    local connection
-    connection = UserInputService.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 and optionsFrame.Visible then
-            local mousePos = UserInputService:GetMouseLocation()
-            local ap, asz = optionsFrame.AbsolutePosition, optionsFrame.AbsoluteSize
-            if not (mousePos.X >= ap.X and mousePos.X <= ap.X + asz.X and mousePos.Y >= ap.Y and mousePos.Y <= ap.Y + asz.Y) then
-                optionsFrame.Visible = false
-                Tween(dropdownIcon, {Rotation = 0}, 0.16)
+    -- (re)build options
+    createOptions()
+
+    -- Wait one heartbeat so UIListLayout can compute AbsoluteContentSize
+    RunService.Heartbeat:Wait()
+
+    -- Try to size the optionsFrame to match its layout content
+    local listLayout = optionsFrame:FindFirstChildOfClass("UIListLayout") or optionsFrame:FindFirstChildOfClass("UIGridLayout")
+    if listLayout and listLayout.AbsoluteContentSize then
+        optionsFrame.Size = UDim2.new(1, 0, 0, listLayout.AbsoluteContentSize.Y)
+    else
+        -- Fallback: wait a couple frames and sum child heights
+        for i = 1, 2 do RunService.Heartbeat:Wait() end
+        local total = 0
+        for _, child in ipairs(optionsFrame:GetChildren()) do
+            if child:IsA("GuiObject") and child.Visible then
+                total = total + (child.AbsoluteSize.Y or 0)
             end
         end
-    end)
+        -- include possible UIPadding offsets if present
+        local pad = optionsFrame:FindFirstChildOfClass("UIPadding")
+        if pad then
+            total = total + ((pad.PaddingTop and pad.PaddingTop.Offset) or 0) + ((pad.PaddingBottom and pad.PaddingBottom.Offset) or 0)
+        end
+        optionsFrame.Size = UDim2.new(1, 0, 0, math.max(1, math.ceil(total)))
+    end
 
-    dropdownFrame.Destroying:Connect(function() if connection then connection:Disconnect() end end)
-
-    createOptions()
-    return dropdown
-end
+    -- show the options and rotate the chevron
+    optionsFrame.Visible = true
+    Tween(dropdownIcon, {Rotation = 180}, 0.16)
+end)
 
 -- Create Input
 function SkyeUI:CreateInput(parent, text, placeholder, callback)
