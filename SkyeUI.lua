@@ -919,11 +919,12 @@ function SkyeUI:CreateSlider(parent, text, min, max, default, callback)
     
     UserInputService.InputChanged:Connect(function(input)
         if isDragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-            local position = input.Position
-            local relativeX = (position.X - sliderTrack.AbsolutePosition.X) / sliderTrack.AbsoluteSize.X
-            local value = min + (max - min) * math.clamp(relativeX, 0, 1)
-            
-            updateSlider(value)
+            if sliderTrack.AbsolutePosition and sliderTrack.AbsoluteSize then
+                local position = input.Position
+                local relativeX = (position.X - sliderTrack.AbsolutePosition.X) / sliderTrack.AbsoluteSize.X
+                local value = min + (max - min) * math.clamp(relativeX, 0, 1)
+                updateSlider(value)
+            end
         end
     end)
     
@@ -1027,13 +1028,13 @@ function SkyeUI:CreateDropdown(parent, text, options, default, callback)
             end
         end
         
-        for _, option in ipairs(options) do
+        for idx, option in ipairs(options) do
             local optionButton = Create("TextButton", {
                 Size = UDim2.new(1, 0, 0, 28),
                 BackgroundColor3 = Themes.Sky.DropdownOption,
                 AutoButtonColor = false,
                 Text = "",
-                LayoutOrder = _
+                LayoutOrder = idx
             }, {
                 Create("TextLabel", {
                     Text = option,
@@ -1193,7 +1194,7 @@ end
 function SkyeUI:CreateLabel(parent, text, isSubText)
     local label = Create("TextLabel", {
         Text = text,
-        Size = UDim2.new(1, 0, 0, isSubText and 14 : 16),
+        Size = UDim2.new(1, 0, 0, isSubText and 14 or 16),
         BackgroundTransparency = 1,
         TextColor3 = isSubText and Themes.Sky.SubText or Themes.Sky.Text,
         Font = isSubText and Enum.Font.Gotham or Enum.Font.GothamBold,
