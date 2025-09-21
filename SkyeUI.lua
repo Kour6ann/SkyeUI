@@ -641,6 +641,7 @@ function SkyeUI:CreateWindow(title)
     -- Apply initial theme
     ApplyTheme("Sky")
     
+    setmetatable(window, SkyeUI)
     return window
 end
 
