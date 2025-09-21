@@ -720,16 +720,73 @@ function SkyeUI:CreateSlider(parent, text, min, max, default, callback)
     return slider
 end
 
--- Create dropdown (keeps most of your logic, registered for theme updates)
+-- Replace the existing CreateDropdown implementation with this block
 function SkyeUI:CreateDropdown(parent, text, options, default, callback)
+    options = options or {}
     local dropdown = { Value = default or options[1], Options = options }
-    local dropdownFrame = Create("Frame", {Name = text, Size = UDim2.new(1,0,0,60), BackgroundTransparency = 1, AutomaticSize = Enum.AutomaticSize.Y}, { Create("UIListLayout", {SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0,4)}) })
-    local label = Create("TextLabel", {Text = text, Size = UDim2.new(1,0,0,18), BackgroundTransparency = 1, TextColor3 = Themes[currentTheme].Text, Font = Enum.Font.Gotham, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left})
-    local dropdownButton = Create("TextButton", {Size = UDim2.new(1,0,0,32), BackgroundColor3 = Themes[currentTheme].DropdownFrame, AutoButtonColor = false, Text = ""}, { Create("UICorner", {CornerRadius = UDim.new(0,6)}), Create("UIStroke", {Color = Themes[currentTheme].InElementBorder, Thickness = 1}) })
-    local selectedLabel = Create("TextLabel", {Text = dropdown.Value, Size = UDim2.new(1,-30,1,0), Position = UDim2.new(0,8,0,0), BackgroundTransparency = 1, TextColor3 = Themes[currentTheme].Text, Font = Enum.Font.Gotham, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd})
-    local dropdownIcon = Create("ImageLabel", {Image = "rbxassetid://10709790948", Size = UDim2.new(0,16,0,16), Position = UDim2.new(1,-20,0.5,-8), BackgroundTransparency = 1, ImageColor3 = Themes[currentTheme].SubText, Rotation = 0})
-    local optionsFrame = Create("Frame", {Size = UDim2.new(1,0,0,0), BackgroundColor3 = Themes[currentTheme].DropdownHolder, Visible = false, AutomaticSize = Enum.AutomaticSize.Y}, { Create("UICorner", {CornerRadius = UDim.new(0,6)}), Create("UIStroke", {Color = Themes[currentTheme].DropdownBorder, Thickness = 1}), Create("UIListLayout", {SortOrder = Enum.SortOrder.LayoutOrder}) })
 
+    local dropdownFrame = Create("Frame", {
+        Name = text,
+        Size = UDim2.new(1, 0, 0, 60),
+        BackgroundTransparency = 1,
+        AutomaticSize = Enum.AutomaticSize.Y
+    }, {
+        Create("UIListLayout", {SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0,4)})
+    })
+
+    local label = Create("TextLabel", {
+        Text = text,
+        Size = UDim2.new(1, 0, 0, 18),
+        BackgroundTransparency = 1,
+        TextColor3 = Themes[currentTheme].Text,
+        Font = Enum.Font.Gotham,
+        TextSize = 13,
+        TextXAlignment = Enum.TextXAlignment.Left
+    })
+
+    local dropdownButton = Create("TextButton", {
+        Size = UDim2.new(1, 0, 0, 32),
+        BackgroundColor3 = Themes[currentTheme].DropdownFrame,
+        AutoButtonColor = false,
+        Text = ""
+    }, {
+        Create("UICorner", {CornerRadius = UDim.new(0,6)}),
+        Create("UIStroke", {Color = Themes[currentTheme].InElementBorder, Thickness = 1})
+    })
+
+    local selectedLabel = Create("TextLabel", {
+        Text = dropdown.Value or "",
+        Size = UDim2.new(1, -30, 1, 0),
+        Position = UDim2.new(0, 8, 0, 0),
+        BackgroundTransparency = 1,
+        TextColor3 = Themes[currentTheme].Text,
+        Font = Enum.Font.Gotham,
+        TextSize = 13,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd
+    })
+
+    local dropdownIcon = Create("ImageLabel", {
+        Image = "rbxassetid://10709790948",
+        Size = UDim2.new(0, 16, 0, 16),
+        Position = UDim2.new(1, -20, 0.5, -8),
+        BackgroundTransparency = 1,
+        ImageColor3 = Themes[currentTheme].SubText,
+        Rotation = 0
+    })
+
+    local optionsFrame = Create("Frame", {
+        Size = UDim2.new(1, 0, 0, 0),
+        BackgroundColor3 = Themes[currentTheme].DropdownHolder,
+        Visible = false,
+        AutomaticSize = Enum.AutomaticSize.Y
+    }, {
+        Create("UICorner", {CornerRadius = UDim.new(0,6)}),
+        Create("UIStroke", {Color = Themes[currentTheme].DropdownBorder, Thickness = 1}),
+        Create("UIListLayout", {SortOrder = Enum.SortOrder.LayoutOrder})
+    })
+
+    -- parent up the hierarchy
     label.Parent = dropdownFrame
     selectedLabel.Parent = dropdownButton
     dropdownIcon.Parent = dropdownButton
@@ -737,81 +794,132 @@ function SkyeUI:CreateDropdown(parent, text, options, default, callback)
     optionsFrame.Parent = dropdownFrame
     dropdownFrame.Parent = parent
 
+    -- theme registrations
     AddThemeConnection(dropdownButton, {BackgroundColor3 = "DropdownFrame"})
     AddThemeConnection(optionsFrame, {BackgroundColor3 = "DropdownHolder"})
     AddThemeConnection(dropdownIcon, {ImageColor3 = "SubText"})
     AddThemeConnection(selectedLabel, {TextColor3 = "Text"})
-    -- UIStroke
-    for _, c in ipairs(dropdownFrame:GetChildren()) do if c:IsA("UIStroke") then AddThemeConnection(c, {Color = "DropdownBorder"}) end end
+    for _,c in ipairs(dropdownFrame:GetChildren()) do
+        if c:IsA("UIStroke") then AddThemeConnection(c, {Color = "DropdownBorder"}) end
+    end
 
+    -- function to (re)build option buttons
     local function createOptions()
+        -- destroy previous option buttons
         for _, child in ipairs(optionsFrame:GetChildren()) do
             if child:IsA("TextButton") then child:Destroy() end
         end
-        for idx, option in ipairs(options) do
-            local optionButton = Create("TextButton", {Size = UDim2.new(1,0,0,28), BackgroundColor3 = Themes[currentTheme].DropdownOption, AutoButtonColor = false, Text = "", LayoutOrder = idx}, {
-                Create("TextLabel", {Name = "Label", Text = option, Size = UDim2.new(1, -12, 1, 0), Position = UDim2.new(0,8,0,0), BackgroundTransparency = 1, TextColor3 = dropdown.Value == option and Themes[currentTheme].Accent or Themes[currentTheme].Text, Font = Enum.Font.Gotham, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left})
+
+        for idx, opt in ipairs(options) do
+            local optionButton = Create("TextButton", {
+                Size = UDim2.new(1, 0, 0, 28),
+                BackgroundColor3 = Themes[currentTheme].DropdownOption,
+                AutoButtonColor = false,
+                Text = "",
+                LayoutOrder = idx
+            }, {
+                Create("TextLabel", {
+                    Name = "Label",
+                    Text = opt,
+                    Size = UDim2.new(1, -12, 1, 0),
+                    Position = UDim2.new(0, 8, 0, 0),
+                    BackgroundTransparency = 1,
+                    TextColor3 = (dropdown.Value == opt) and Themes[currentTheme].Accent or Themes[currentTheme].Text,
+                    Font = Enum.Font.Gotham,
+                    TextSize = 13,
+                    TextXAlignment = Enum.TextXAlignment.Left
+                })
             })
-            optionButton.MouseEnter:Connect(function() Tween(optionButton, {BackgroundColor3 = Themes[currentTheme].DropdownFrame}, 0.12) end)
-            optionButton.MouseLeave:Connect(function() Tween(optionButton, {BackgroundColor3 = Themes[currentTheme].DropdownOption}, 0.12) end)
+
+            optionButton.MouseEnter:Connect(function()
+                Tween(optionButton, {BackgroundColor3 = Themes[currentTheme].DropdownFrame}, 0.12)
+            end)
+            optionButton.MouseLeave:Connect(function()
+                Tween(optionButton, {BackgroundColor3 = Themes[currentTheme].DropdownOption}, 0.12)
+            end)
             optionButton.MouseButton1Click:Connect(function()
-                dropdown.Value = option
-                selectedLabel.Text = option
+                dropdown.Value = opt
+                selectedLabel.Text = opt
+                -- update all labels' colors
                 for _, child in ipairs(optionsFrame:GetChildren()) do
                     if child:IsA("TextButton") and child:FindFirstChild("Label") then
-                        child.Label.TextColor3 = dropdown.Value == child.Label.Text and Themes[currentTheme].Accent or Themes[currentTheme].Text
+                        child.Label.TextColor3 = (child.Label.Text == dropdown.Value) and Themes[currentTheme].Accent or Themes[currentTheme].Text
                     end
                 end
                 optionsFrame.Visible = false
                 Tween(dropdownIcon, {Rotation = 0}, 0.18)
                 if callback then pcall(callback, dropdown.Value) end
             end)
+
             optionButton.Parent = optionsFrame
             AddThemeConnection(optionButton, {BackgroundColor3 = "DropdownOption"})
             if optionButton:FindFirstChild("Label") then AddThemeConnection(optionButton.Label, {TextColor3 = "Text"}) end
         end
     end
 
-    -- Replace existing dropdownButton.MouseButton1Click handler with this block
-dropdownButton.MouseButton1Click:Connect(function()
-    if optionsFrame.Visible then
-        -- close
-        optionsFrame.Visible = false
-        Tween(dropdownIcon, {Rotation = 0}, 0.16)
-        return
-    end
+    -- show/hide handler with robust sizing before showing
+    dropdownButton.MouseButton1Click:Connect(function()
+        if optionsFrame.Visible then
+            optionsFrame.Visible = false
+            Tween(dropdownIcon, {Rotation = 0}, 0.16)
+            return
+        end
 
-    -- (re)build options
-    createOptions()
+        -- rebuild options to ensure they reflect current `options`
+        createOptions()
 
-    -- Wait one heartbeat so UIListLayout can compute AbsoluteContentSize
-    RunService.Heartbeat:Wait()
+        -- wait a heartbeat for layout calculations
+        RunService.Heartbeat:Wait()
 
-    -- Try to size the optionsFrame to match its layout content
-    local listLayout = optionsFrame:FindFirstChildOfClass("UIListLayout") or optionsFrame:FindFirstChildOfClass("UIGridLayout")
-    if listLayout and listLayout.AbsoluteContentSize then
-        optionsFrame.Size = UDim2.new(1, 0, 0, listLayout.AbsoluteContentSize.Y)
-    else
-        -- Fallback: wait a couple frames and sum child heights
-        for i = 1, 2 do RunService.Heartbeat:Wait() end
-        local total = 0
-        for _, child in ipairs(optionsFrame:GetChildren()) do
-            if child:IsA("GuiObject") and child.Visible then
-                total = total + (child.AbsoluteSize.Y or 0)
+        -- prefer UIListLayout.AbsoluteContentSize if present
+        local listLayout = optionsFrame:FindFirstChildOfClass("UIListLayout") or optionsFrame:FindFirstChildOfClass("UIGridLayout")
+        if listLayout and listLayout.AbsoluteContentSize then
+            optionsFrame.Size = UDim2.new(1, 0, 0, listLayout.AbsoluteContentSize.Y)
+        else
+            -- fallback: wait a couple frames and sum children heights
+            for i = 1, 2 do RunService.Heartbeat:Wait() end
+            local total = 0
+            for _, child in ipairs(optionsFrame:GetChildren()) do
+                if child:IsA("GuiObject") and child.Visible then
+                    total = total + (child.AbsoluteSize.Y or 0)
+                end
+            end
+            local pad = optionsFrame:FindFirstChildOfClass("UIPadding")
+            if pad then
+                total = total + ((pad.PaddingTop and pad.PaddingTop.Offset) or 0) + ((pad.PaddingBottom and pad.PaddingBottom.Offset) or 0)
+            end
+            optionsFrame.Size = UDim2.new(1, 0, 0, math.max(1, math.ceil(total)))
+        end
+
+        optionsFrame.Visible = true
+        Tween(dropdownIcon, {Rotation = 180}, 0.16)
+    end)
+
+    -- outside-click handler; ensure cleanup on destroy
+    local outsideConn
+    outsideConn = UserInputService.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 and optionsFrame.Visible then
+            local mousePos = UserInputService:GetMouseLocation()
+            local ap, asz = optionsFrame.AbsolutePosition, optionsFrame.AbsoluteSize
+            if not (mousePos.X >= ap.X and mousePos.X <= ap.X + asz.X and mousePos.Y >= ap.Y and mousePos.Y <= ap.Y + asz.Y) then
+                optionsFrame.Visible = false
+                Tween(dropdownIcon, {Rotation = 0}, 0.16)
             end
         end
-        -- include possible UIPadding offsets if present
-        local pad = optionsFrame:FindFirstChildOfClass("UIPadding")
-        if pad then
-            total = total + ((pad.PaddingTop and pad.PaddingTop.Offset) or 0) + ((pad.PaddingBottom and pad.PaddingBottom.Offset) or 0)
-        end
-        optionsFrame.Size = UDim2.new(1, 0, 0, math.max(1, math.ceil(total)))
-    end
+    end)
 
-    -- show the options and rotate the chevron
-    optionsFrame.Visible = true
-    Tween(dropdownIcon, {Rotation = 180}, 0.16)
-end)
+    dropdownFrame.Destroying:Connect(function()
+        if outsideConn then
+            pcall(function() outsideConn:Disconnect() end)
+            outsideConn = nil
+        end
+    end)
+
+    -- initial build
+    createOptions()
+
+    return dropdown
+end
 
 -- Create Input
 function SkyeUI:CreateInput(parent, text, placeholder, callback)
